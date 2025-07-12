@@ -1,103 +1,84 @@
-import Image from "next/image";
+// src/app/page.tsx
+import Header from "@/components/Header";
+import ProductCard from "@/components/ProductCard";
+import Sidebar from "@/components/Sidebar";
+import { MongoClient } from "mongodb"; // Importamos el cliente de MongoDB
 
-export default function Home() {
+// Esta es una función asíncrona que se conecta y obtiene los productos
+async function getProducts() {
+  const uri = process.env.MONGODB_URI; // Leemos la llave secreta desde .env.local
+  if (!uri) {
+    throw new Error("Falta la variable de entorno MONGODB_URI");
+  }
+
+  const client = new MongoClient(uri);
+
+  try {
+    await client.connect();
+    const db = client.db("duck-store-db"); // Elige un nombre para tu base de datos
+    const productsCollection = db.collection("products"); // Y un nombre para tu colección de productos
+    
+    // Buscamos todos los productos y los convertimos a un array
+    const products = await productsCollection.find({}).toArray();
+    
+    // Mapeamos los datos para que coincidan con lo que espera ProductCard
+    return products.map(p => ({
+      id: p._id.toString(), // Convertimos el _id de Mongo a un string
+      name: p.name,
+      price: p.price,
+      size: p.size,
+      imageUrl: p.imageUrl,
+    }));
+
+  } finally {
+    await client.close(); // Siempre cerramos la conexión
+  }
+}
+
+// Convertimos el componente Home en un componente asíncrono para poder usar await
+export default async function Home() {
+  
+  // Llamamos a la función para obtener los productos.
+  // Next.js se encargará de hacer esto en el servidor.
+  const products = await getProducts();
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="bg-gray-50 min-h-screen">
+      <Header />
+      <main className="max-w-7xl mx-auto p-4 lg:p-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          <div className="flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+               <div className="lg:col-span-1"><img src="https://i.imgur.com/8Q5yH9G.jpg" alt="Featured Duck" className="rounded-lg object-cover w-full h-full" /></div>
+               <div className="lg:col-span-1"><img src="https://i.imgur.com/o2K1QfP.jpg" alt="Featured Duck" className="rounded-lg object-cover w-full h-full" /></div>
+               <div className="lg:col-span-2"><img src="https://i.imgur.com/3q1ZqL2.png" alt="Featured Models" className="rounded-lg object-cover w-full h-full" /></div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.length > 0 ? (
+                products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    name={product.name}
+                    price={product.price}
+                    size={product.size}
+                    imageUrl={product.imageUrl}
+                  />
+                ))
+              ) : (
+                <p className="col-span-full text-center text-gray-500">
+                  No hay patitos en la tienda... todavía. ¡Vuelve pronto!
+                </p>
+              )}
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
+            <Sidebar />
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
